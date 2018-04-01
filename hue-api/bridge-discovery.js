@@ -1,12 +1,11 @@
 "use strict";
 
 var url = require("url")
-    , Q = require("q")
-    , search = require("./search")
-    , http = require("./httpPromise")
-    , utils = require("./utils")
-    , discovery = require("./commands/discovery")
-    ;
+	, search = require("./search")
+	, http = require("./httpPromise")
+	, utils = require("./utils")
+	, discovery = require("./commands/discovery")
+	;
 
 /**
  * Will locate the Philips Hue Devices on the network. Depending upon the speed and size of the network the timeout
@@ -17,7 +16,7 @@ var url = require("url")
  * @return A promise that will resolve the Hue Bridges as an Array of {"id": {String}, "ipaddress": {String}} objects.
  */
 module.exports.networkSearch = function (timeout) {
-    return search.locateBridges(timeout).then(_identifyBridges);
+	return search.locateBridges(timeout).then(_identifyBridges);
 };
 
 /**
@@ -28,8 +27,8 @@ module.exports.networkSearch = function (timeout) {
  * @returns {Q.promise} A promise that will resolve the addresses of the bridges, or {null} if a callback was provided.
  */
 module.exports.locateBridges = function (cb) {
-    var promise = http.invoke(discovery.upnpLookup, {host: "www.meethue.com", ssl: true});
-    return utils.promiseOrCallback(promise, cb);
+	var promise = http.invoke(discovery.upnpLookup, {host: "www.meethue.com", ssl: true});
+	return utils.promiseOrCallback(promise, cb);
 };
 
 /**
@@ -40,8 +39,8 @@ module.exports.locateBridges = function (cb) {
  * @private
  */
 module.exports.description = function (host) {
-    return http.invoke(discovery.description, {"host": host})
-        .then(_parseDescription);
+	return http.invoke(discovery.description, {"host": host})
+		.then(_parseDescription);
 };
 
 /**
@@ -51,18 +50,18 @@ module.exports.description = function (host) {
  * @private
  */
 function _identifyBridges(possibleBridges) {
-    var lookups = []
-        , path
-        //, uri
-        ;
+	var lookups = []
+		, path
+		//, uri
+		;
 
-    for (path in possibleBridges) {
-        if (possibleBridges.hasOwnProperty(path)) {
-            //uri = parseUri(path);
-            lookups.push(followLocationResponse(path).then(_getHueBridgeHost));
-        }
-    }
-    return Q.all(lookups);
+	for (path in possibleBridges) {
+		if (possibleBridges.hasOwnProperty(path)) {
+			//uri = parseUri(path);
+			lookups.push(followLocationResponse(path).then(_getHueBridgeHost));
+		}
+	}
+	return Promise.all(lookups);
 }
 
 /**
@@ -71,12 +70,12 @@ function _identifyBridges(possibleBridges) {
  * @param path The path in the LOCATION response from SSDP lookup.
  */
 function followLocationResponse(path) {
-    return http.simpleGet(path)
-        .then(_parseDescription)
-        .fail(function (err) {
-            // Do nothing with services that do not respond with an XML document
-        })
-        ;
+	return http.simpleGet(path)
+		.then(_parseDescription)
+		.fail(function (err) {
+			// Do nothing with services that do not respond with an XML document
+		})
+		;
 }
 
 /**
@@ -86,82 +85,81 @@ function followLocationResponse(path) {
  * @private
  */
 function _parseDescription(xml) {
-    var xml2js = require("xml2js")
-        , parser = new xml2js.Parser()
-        , deferred = Q.defer()
-        ;
+	return new Promise((resolve, reject) => {
+		var xml2js = require("xml2js")
+			, parser = new xml2js.Parser()
+			;
 
-    parser.parseString(xml, function (err, data) {
-        var result = null
-            , icons
-            ;
+		parser.parseString(xml, function (err, data) {
+			var result = null
+				, icons
+				;
 
-        if (err) {
-            deferred.reject(err);
-        } else {
-            result = {
-                "version": {
-                    "major": data.root.specVersion[0].major[0],
-                    "minor": data.root.specVersion[0].minor[0]
-                },
-                "url": data.root.URLBase[0],
-                "name": data.root.device[0].friendlyName[0],
-                "manufacturer": data.root.device[0].manufacturer[0],
-                "model": {
-                    "name": data.root.device[0].modelName[0],
-                    "description": data.root.device[0].modelDescription[0],
-                    "number": data.root.device[0].modelNumber[0],
-                    "serial": data.root.device[0].serialNumber[0],
-                    "udn": data.root.device[0].UDN[0]
-                }
-            };
+			if (err) {
+				reject(err);
+			} else {
+				result = {
+					"version": {
+						"major": data.root.specVersion[0].major[0],
+						"minor": data.root.specVersion[0].minor[0]
+					},
+					"url": data.root.URLBase[0],
+					"name": data.root.device[0].friendlyName[0],
+					"manufacturer": data.root.device[0].manufacturer[0],
+					"model": {
+						"name": data.root.device[0].modelName[0],
+						"description": data.root.device[0].modelDescription[0],
+						"number": data.root.device[0].modelNumber[0],
+						"serial": data.root.device[0].serialNumber[0],
+						"udn": data.root.device[0].UDN[0]
+					}
+				};
 
-            if (data.root.device[0].iconList
-                && data.root.device[0].iconList[0]
-                && data.root.device[0].iconList[0].icon) {
-                icons = [];
+				if (data.root.device[0].iconList
+					&& data.root.device[0].iconList[0]
+					&& data.root.device[0].iconList[0].icon) {
+					icons = [];
 
-                data.root.device[0].iconList[0].icon.forEach(function (icon) {
-                    icons.push({
-                        mimetype: icon.mimetype[0],
-                        height: icon.height[0],
-                        width: icon.width[0],
-                        depth: icon.depth[0],
-                        url: icon.url[0]
-                    });
-                });
+					data.root.device[0].iconList[0].icon.forEach(function (icon) {
+						icons.push({
+							mimetype: icon.mimetype[0],
+							height: icon.height[0],
+							width: icon.width[0],
+							depth: icon.depth[0],
+							url: icon.url[0]
+						});
+					});
 
-                result.icons = icons;
-            }
+					result.icons = icons;
+				}
 
-            deferred.resolve(result);
-        }
-    });
-
-    return deferred.promise;
+				resolve(result);
+			}
+		});
+	});
 }
 
 function _isHueBridge(description) {
-    var name;
+	var name;
 
-    if (description && description.model && description.model.name) {
-        name = description.model.name;
-        if (name.toLowerCase().indexOf("philips hue bridge") >= 0) {
-            return true;
-        }
-    }
-    return false;
+	if (description && description.model && description.model.name) {
+		name = description.model.name;
+		if (name.toLowerCase().indexOf("philips hue bridge") >= 0) {
+			return true;
+		}
+	}
+	return false;
 }
 
 function _getHueBridgeHost(description) {
-    var uri;
+	var uri;
 
-    if (_isHueBridge(description)) {
-        uri = url.parse(description.url);
-        return {
-            "id": description.model.serial,
-            "ipaddress": uri.hostname
-        };
-    }
-    return null;
+	if (_isHueBridge(description)) {
+		uri = url.parse(description.url);
+		return {
+			"id": description.model.serial,
+			"ipaddress": uri.hostname
+		};
+	}
+	return null;
 }

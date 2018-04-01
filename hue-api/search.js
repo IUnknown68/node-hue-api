@@ -1,7 +1,6 @@
 "use strict";
 
-var Q = require("q"),
-    dgram = require('dgram'),
+var dgram = require('dgram'),
     EventEmitter = require('events').EventEmitter,
     util = require("util");
 
@@ -13,22 +12,22 @@ var socketCleanUp = new SocketCleanUp();
  * @return {Function|promise|promise|exports.promise}
  */
 function locateBridges(timeout) {
-    var deferred = Q.defer(),
-        search = new SSDPSearch(timeout),
-        results = [];
+    return new Promise((resolve, reject) => {
+        var search = new SSDPSearch(timeout),
+            results = [];
 
-    search.on("response", function(value) {
-        results.push(value);
+        search.on("response", function(value) {
+            results.push(value);
+        });
+        search.search();
+
+        // Give up after the timeout and process whatever results we have
+        setTimeout(function() {
+            _close(search);
+            resolve(_filterResults(results));
+        }, timeout || 5000);
+
     });
-    search.search();
-
-    // Give up after the timeout and process whatever results we have
-    setTimeout(function() {
-        _close(search);
-        deferred.resolve(_filterResults(results));
-    }, timeout || 5000);
-
-    return deferred.promise;
 }
 module.exports.locateBridges = locateBridges;
 
